@@ -45,35 +45,20 @@ public class UserService {
     }
 
     private void makeUserFromRequest(User user, UserRequest userRequest) {
-        if(userRequest.getFirstName() != null) {
-            user.setFirstName(userRequest.getFirstName());
-        }
-        if(userRequest.getLastName() != null) {
-            user.setLastName(userRequest.getLastName());
-        }
-        if(userRequest.getEmail() != null) {
-            user.setEmail(userRequest.getEmail());
-        }
-        if(userRequest.getPhone() != null) {
-            user.setPhone(userRequest.getPhone());
-        }
-        if(userRequest.getUsername() != null) {
-            user.setUsername(userRequest.getUsername());
-        }
-        if(userRequest.getPassword() != null) {
-            user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        }
-        if(userRequest.getUserRole() != null) {
-            user.setRole(userRequest.getUserRole());
-        }
-        if(userRequest.getAddress() != null) {
-            Address address = new Address();
-            address.setStreet(userRequest.getAddress().getStreet());
-            address.setApartment(userRequest.getAddress().getApartment());
-            address.setCity(userRequest.getAddress().getCity());
-            address.setCountry(userRequest.getAddress().getCountry());
-            user.setAddress(address);
-        }
+        user.setFirstName(userRequest.getFirstName());
+        user.setLastName(userRequest.getLastName());
+        user.setEmail(userRequest.getEmail());
+        user.setPhone(userRequest.getPhone());
+        user.setUsername(userRequest.getUsername());
+        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        user.setRole(userRequest.getUserRole());
+        Address address = new Address();
+        address.setStreet(userRequest.getAddress().getStreet());
+        address.setApartment(userRequest.getAddress().getApartment());
+        address.setCity(userRequest.getAddress().getCity());
+        address.setCountry(userRequest.getAddress().getCountry());
+        user.setAddress(address);
+
     }
 
     private UserResponse mapToUserResponse(User user) {

@@ -3,6 +3,7 @@ package com.app.ecom_application.controller;
 import com.app.ecom_application.dto.UserRequest;
 import com.app.ecom_application.dto.UserResponse;
 import com.app.ecom_application.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,13 +37,13 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<String> createUser(@RequestBody UserRequest userRequest) {
+    public ResponseEntity<String> createUser(@Valid @RequestBody UserRequest userRequest) {
         userService.addUser(userRequest);
         return new ResponseEntity<>("User created successfully!", HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateUserInfo(@PathVariable Long id, @RequestBody UserRequest updatedUserRequest) {
+    public ResponseEntity<String> updateUserInfo(@PathVariable Long id, @Valid @RequestBody UserRequest updatedUserRequest) {
         boolean updated = userService.updateUser(id, updatedUserRequest);
         if (updated) {
             return new ResponseEntity<>("User information updated successfully!", HttpStatus.OK);

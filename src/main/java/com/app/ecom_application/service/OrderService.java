@@ -26,7 +26,7 @@ public class OrderService {
         if(cartItems.isEmpty()) {
             return Optional.empty();
         }
-        Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+        Optional<User> userOpt = userRepository.findByUsername(userId);
         if(userOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -66,17 +66,18 @@ public class OrderService {
     }
 
     public Optional<List<OrderResponse>> getAllOrders(String userId) {
-        Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+        Optional<User> userOpt = userRepository.findByUsername(userId);
         if(userOpt.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(orderRepository.findByUserId(Long.valueOf(userId))
+        User user = userOpt.get();
+        return Optional.of(orderRepository.findByUserId(user.getId())
                 .stream().filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                 .map(this::mapToOrderResponse).toList());
     }
 
     public Optional<OrderResponse> getOrder(String userId, Long orderId) {
-        Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+        Optional<User> userOpt = userRepository.findByUsername(userId);
         if(userOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -84,12 +85,12 @@ public class OrderService {
         if(orderOpt.isEmpty() || orderOpt.get().getStatus().equals(OrderStatus.CANCELLED)) {
             return Optional.empty();
         }
-        return orderRepository.findByUserIdAndId(Long.valueOf(userId), orderId)
+        return orderRepository.findByUserIdAndId(userOpt.get().getId(), orderId)
                 .map(this::mapToOrderResponse);
     }
 
     public boolean deleteOrder(String userId, Long orderId) {
-        Optional<User> userOpt = userRepository.findById(Long.valueOf(userId));
+        Optional<User> userOpt = userRepository.findByUsername(userId);
         if(userOpt.isEmpty()) {
             return false;
         }
@@ -97,7 +98,7 @@ public class OrderService {
         if(orderOpt.isEmpty() || orderOpt.get().getStatus().equals(OrderStatus.CANCELLED)) {
             return false;
         }
-        return orderRepository.findById(orderId)
+        return orderRepository.findByUserIdAndId(userOpt.get().getId(), orderId)
                 .map(order -> {
                     for (OrderItem item : order.getItems()) {
                         Product product = item.getProduct();

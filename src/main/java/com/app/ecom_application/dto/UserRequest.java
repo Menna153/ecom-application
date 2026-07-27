@@ -9,29 +9,29 @@ import lombok.Data;
 
 @Data
 public class UserRequest {
-    @NotBlank(message = "First name is required")
+    @NotBlank(message = "103")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
+    @NotBlank(message = "104")
     private String lastName;
 
-    @Email(message = "Invalid email")
-    @NotBlank(message = "Email is required")
+    @NotBlank(message = "105")
+    @Email(message = "106")
     private String email;
 
-    @NotBlank(message = "Phone number is required")
+    @NotBlank(message = "107")
     private String phone;
 
-    @NotNull(message = "Address is required")
+    @NotNull(message = "108")
     @Valid
     private AddressDTO address;
 
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "101")
     private String username;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "102")
     private String password;
 
-    @NotNull(message = "Role is required")
+    @NotNull(message = "109")
     private UserRole userRole;
 }

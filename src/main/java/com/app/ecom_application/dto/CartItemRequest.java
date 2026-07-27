@@ -6,10 +6,10 @@ import lombok.Data;
 
 @Data
 public class CartItemRequest {
-    @NotNull(message = "Product Id is required")
+    @NotNull(message = "301")
     private Long productId;
 
-    @NotNull(message = "Quantity is required")
-    @Positive(message = "Quantity must be greater than 0")
+    @NotNull(message = "302")
+    @Positive(message = "303")
     private Integer quantity;
 }

@@ -1,8 +1,10 @@
 package com.app.ecom_application.controller;
 
+import com.app.ecom_application.dto.RefreshTokenRequest;
 import com.app.ecom_application.model.LoginRequest;
 import com.app.ecom_application.model.LoginResponse;
 import com.app.ecom_application.security.JwtService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,7 +23,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
-            @RequestBody LoginRequest request) {
+            @Valid @RequestBody LoginRequest request) {
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -31,7 +33,36 @@ public class AuthController {
         );
 
         String token = jwtService.generateToken(request.getUsername());
+        String refreshToken =
+                jwtService.generateRefreshToken(request.getUsername());
 
-        return ResponseEntity.ok(new LoginResponse(token));
+        return ResponseEntity.ok(new LoginResponse(token, refreshToken));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout() {
+        return ResponseEntity.ok("Logged out successfully");
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request) {
+
+        String username =
+                jwtService.extractUsername(request.getRefreshToken());
+
+        if (!jwtService.isTokenValid(request.getRefreshToken(), username)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String accessToken =
+                jwtService.generateToken(username);
+
+        String refreshToken =
+                jwtService.generateRefreshToken(username);
+
+        return ResponseEntity.ok(
+                new LoginResponse(accessToken, refreshToken)
+        );
     }
 }

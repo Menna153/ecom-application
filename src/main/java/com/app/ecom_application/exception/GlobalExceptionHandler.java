@@ -6,31 +6,30 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(
+    public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex) {
 
-        Map<String, String> errors = new HashMap<>();
+        String validationCode = ex.getBindingResult()
+                .getFieldError()
+                .getDefaultMessage();
 
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-                errors.put(error.getField(), error.getDefaultMessage()));
+        int code = Integer.parseInt(validationCode);
 
-        return ResponseEntity.badRequest().body(errors);
+        ErrorCode error = ErrorCode.fromCode(code);
+
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse(error.getMessage(), error.getCode()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleException(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleException(Exception ex) {
 
-        Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
+        ErrorCode error = ErrorCode.INTERNAL_SERVER_ERROR;
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(error);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse(error.getMessage(), error.getCode()));
     }
 }

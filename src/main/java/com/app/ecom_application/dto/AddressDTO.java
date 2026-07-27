@@ -5,15 +5,15 @@ import lombok.Data;
 
 @Data
 public class AddressDTO {
-    @NotBlank(message = "Street name is required")
+    @NotBlank(message = "110")
     private String street;
 
-    @NotBlank(message = "Apartment number is required")
+    @NotBlank(message = "111")
     private String apartment;
 
-    @NotBlank(message = "City field is required")
+    @NotBlank(message = "112")
     private String city;
 
-    @NotBlank(message = "Country field is required")
+    @NotBlank(message = "113")
     private String country;
 }

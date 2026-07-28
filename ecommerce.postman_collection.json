@@ -14,7 +14,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"firstName\": \"John\",\r\n    \"lastName\": \"Doe\",\r\n    \"email\": \"john.doe@gmail.com\",\r\n    \"phone\": \"123456789\",\r\n    \"username\": \"menna alaa\",\r\n    \"password\": \"menna\",\r\n    \"address\": {\r\n        \"street\": \"test street\",\r\n        \"apartment\": \"50\",\r\n        \"city\": \"cairo\",\r\n        \"country\": \"egypt\"\r\n    }\r\n\r\n\r\n}",
+          "raw": "{\r\n    \"firstName\": \"John\",\r\n    \"lastName\": \"Doe\",\r\n    \"email\": \"john.doe@gmail.com\",\r\n    \"phone\": \"123456789\",\r\n    \"username\": \"User\",\r\n    \"password\": \"user\",\r\n    \"address\": {\r\n        \"street\": \"test street\",\r\n        \"apartment\": \"50\",\r\n        \"city\": \"cairo\",\r\n        \"country\": \"egypt\"\r\n    },\r\n    \"userRole\" : \"CUSTOMER\"\r\n\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -491,6 +491,36 @@
             "api",
             "auth",
             "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "refreshTokenRequest",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyIiwiaWF0IjoxNzg1MTUxNTkxLCJleHAiOjE3ODUyMzc5OTF9.9P3T7vTBQhwYUR-jVql2ruK9o3yoFlSkYzQTEebmf2I\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/refresh",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "auth",
+            "refresh"
           ]
         }
       },

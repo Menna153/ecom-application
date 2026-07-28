@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +36,22 @@ public class ProductService {
         });
     }
 
-    public List<ProductResponse> getAllProducts() {
-        return productRepository.findByActiveTrue().stream()
+    public List<ProductResponse> getAllProducts(String name, int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (name == null || name.isBlank()) {
+            return productRepository.findByActiveTrue(pageable)
+                    .stream()
+                    .map(this::mapToProductResponse)
+                    .toList();
+        }
+
+        return productRepository
+                .findByActiveTrueAndNameContainingIgnoreCase(name, pageable)
+                .stream()
                 .map(this::mapToProductResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public Optional<ProductResponse> getProduct(Long id) {

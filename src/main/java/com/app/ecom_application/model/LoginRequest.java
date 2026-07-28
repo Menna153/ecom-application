@@ -5,9 +5,9 @@ import lombok.Data;
 
 @Data
 public class LoginRequest {
-    @NotBlank(message = "Username is required")
+    @NotBlank(message = "101")
     private String username;
 
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "102")
     private String password;
 }

@@ -14,6 +14,10 @@ public enum ErrorCode {
     APARTMENT_REQUIRED(111, "Apartment number is required"),
     CITY_REQUIRED(112, "City field is required"),
     COUNTRY_REQUIRED(113, "Country field is required"),
+    USERNAME_ALREADY_EXISTS(114, "Username already exists"),
+    EMAIL_ALREADY_EXISTS(115, "Email already exists"),
+    UNAUTHORIZED(116, "You cannot edit this user data"),
+    USER_NOT_FOUND(117, "Cannot find this user"),
     PRODUCT_NAME_REQUIRED(201, "Product name is required"),
     PRODUCT_DESCRIPTION_REQUIRED(202, "Description is required"),
     PRICE_REQUIRED(203, "Price is required"),
@@ -24,6 +28,7 @@ public enum ErrorCode {
     QUANTITY_REQUIRED(302, "Quantity is required"),
     QUANTITY_POSITIVE(303, "Quantity must be greater than 0"),
     REFRESH_TOKEN_REQUIRED(401, "Refresh token is required"),
+
 
     VALIDATION_FAILED(1003, "Validation failed"),
 

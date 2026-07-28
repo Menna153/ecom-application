@@ -1,8 +1,10 @@
 package com.app.ecom_application.controller;
 
 import com.app.ecom_application.dto.CartItemRequest;
+import com.app.ecom_application.dto.CartItemResponse;
 import com.app.ecom_application.model.CartItem;
 import com.app.ecom_application.service.CartService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +23,7 @@ public class CartController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<String> addToCart(Authentication authentication, @RequestBody CartItemRequest request) {
+    public ResponseEntity<String> addToCart(Authentication authentication, @Valid @RequestBody CartItemRequest request) {
         if(!cartService.addToCart(authentication.getName(), request)) {
             return ResponseEntity.badRequest().body("Product out of stock or product not found or User not found");
         }
@@ -37,7 +39,7 @@ public class CartController {
 
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<CartItem>> getCart(Authentication authentication) {
+    public ResponseEntity<List<CartItemResponse>> getCart(Authentication authentication) {
         return ResponseEntity.ok(cartService.getCart(authentication.getName()));
     }
 }

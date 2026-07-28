@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,7 +23,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     public Optional<OrderResponse> createOrder(String userId) {
-        List<CartItem> cartItems = cartService.getCart(userId);
+        List<CartItem> cartItems = cartService.getCartItems(userId);
         if(cartItems.isEmpty()) {
             return Optional.empty();
         }
@@ -38,12 +39,13 @@ public class OrderService {
             }
         }
         BigDecimal totalPrice = cartItems.stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .map(CartItem::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.CONFIRMED);
         order.setTotalAmount(totalPrice);
+        order.setCreatedAt(LocalDateTime.now());
         List<OrderItem> orderItems = cartItems.stream()
                 .map(item -> new OrderItem(
                         null,
@@ -65,15 +67,43 @@ public class OrderService {
         return Optional.of(mapToOrderResponse(savedOrder));
     }
 
-    public Optional<List<OrderResponse>> getAllOrders(String userId) {
+    public Optional<List<OrderResponse>> getAllOrders(String userId, LocalDateTime from, LocalDateTime to, OrderStatus status) {
         Optional<User> userOpt = userRepository.findByUsername(userId);
         if(userOpt.isEmpty()) {
             return Optional.empty();
         }
         User user = userOpt.get();
-        return Optional.of(orderRepository.findByUserId(user.getId())
-                .stream().filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .map(this::mapToOrderResponse).toList());
+        List<Order> orders;
+
+        if (from == null) {
+            from = LocalDateTime.of(2000, 1, 1, 0, 0);
+        }
+
+        if (to == null) {
+            to = LocalDateTime.now();
+        }
+
+        if (status != null) {
+            orders = orderRepository.findByUserIdAndStatusAndCreatedAtBetween(
+                    user.getId(),
+                    status,
+                    from,
+                    to
+            );
+        } else {
+            orders = orderRepository.findByUserIdAndCreatedAtBetween(
+                    user.getId(),
+                    from,
+                    to
+            );
+        }
+
+        return Optional.of(
+                orders.stream()
+                        .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                        .map(this::mapToOrderResponse)
+                        .toList()
+        );
     }
 
     public Optional<OrderResponse> getOrder(String userId, Long orderId) {
@@ -127,5 +157,40 @@ public class OrderService {
                                 orderItem.getPrice()
                         )).toList()
         );
+    }
+
+    public List<OrderResponse> getAllOrdersForAdmin(
+            String username,
+            LocalDateTime from,
+            LocalDateTime to,
+            OrderStatus status) {
+
+        if (from == null) {
+            from = LocalDateTime.of(2000, 1, 1, 0, 0);
+        }
+
+        if (to == null) {
+            to = LocalDateTime.now();
+        }
+
+        List<Order> orders;
+
+        if (username != null && status != null) {
+            orders = orderRepository.findByUserUsernameAndStatusAndCreatedAtBetween(
+                    username, status, from, to);
+        } else if (username != null) {
+            orders = orderRepository.findByUserUsernameAndCreatedAtBetween(
+                    username, from, to);
+        } else if (status != null) {
+            orders = orderRepository.findByStatusAndCreatedAtBetween(
+                    status, from, to);
+        } else {
+            orders = orderRepository.findByCreatedAtBetween(from, to);
+        }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .map(this::mapToOrderResponse)
+                .toList();
     }
 }

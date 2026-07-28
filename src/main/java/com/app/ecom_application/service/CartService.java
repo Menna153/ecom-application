@@ -1,6 +1,7 @@
 package com.app.ecom_application.service;
 
 import com.app.ecom_application.dto.CartItemRequest;
+import com.app.ecom_application.dto.CartItemResponse;
 import com.app.ecom_application.model.CartItem;
 import com.app.ecom_application.model.Product;
 import com.app.ecom_application.model.User;
@@ -30,9 +31,6 @@ public class CartService {
             return false;
         }
         Product product = productOpt.get();
-        if(product.getStockQuantity()< request.getQuantity()) {
-            return false;
-        }
         if(!product.isActive()) {
             return false;
         }
@@ -42,17 +40,28 @@ public class CartService {
         }
         User user = userOpt.get();
         CartItem existingCartItem = cartItemRepository.findByUserAndProduct(user, product);
-        if(existingCartItem != null) {
-            existingCartItem.setQuantity(existingCartItem.getQuantity() + request.getQuantity());
-            existingCartItem.setPrice(product.getPrice().multiply(BigDecimal.valueOf(existingCartItem.getQuantity())));
+        int totalQuantity = request.getQuantity();
+        if (existingCartItem != null) {
+            totalQuantity += existingCartItem.getQuantity();
+        }
+        if (product.getStockQuantity() < totalQuantity) {
+            return false;
+        }
+        if (existingCartItem != null) {
+            existingCartItem.setQuantity(totalQuantity);
+            existingCartItem.setPrice(
+                    product.getPrice().multiply(BigDecimal.valueOf(totalQuantity))
+            );
             cartItemRepository.save(existingCartItem);
         }
         else {
             CartItem cartItem = new CartItem();
             cartItem.setUser(user);
             cartItem.setProduct(product);
-            cartItem.setQuantity(request.getQuantity());
-            cartItem.setPrice(product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+            cartItem.setQuantity(totalQuantity);
+            cartItem.setPrice(
+                    product.getPrice().multiply(BigDecimal.valueOf(totalQuantity))
+            );
             cartItemRepository.save(cartItem);
         }
         return true;
@@ -68,14 +77,32 @@ public class CartService {
         return false;
     }
 
-    public List<CartItem> getCart(String userId) {
+    public List<CartItemResponse> getCart(String userId) {
         return userRepository.findByUsername(userId)
                 .map(cartItemRepository::findByUser)
-                .orElseGet(List::of);
+                .orElse(List.of())
+                .stream()
+                .map(this::mapToCartItemResponse)
+                .toList();
+    }
+
+    public List<CartItem> getCartItems(String userId) {
+        return userRepository.findByUsername(userId)
+                .map(cartItemRepository::findByUser)
+                .orElse(List.of());
     }
 
     public void clearCart(String userId) {
         userRepository.findByUsername(userId)
                 .ifPresent(cartItemRepository::deleteByUser);
+    }
+
+    public CartItemResponse mapToCartItemResponse(CartItem cartItem) {
+        CartItemResponse cartItemResponse = new CartItemResponse();
+        cartItemResponse.setProductId(cartItem.getProduct().getId());
+        cartItemResponse.setProductName(cartItem.getProduct().getName());
+        cartItemResponse.setQuantity(cartItem.getQuantity());
+        cartItemResponse.setPrice(cartItem.getPrice());
+        return cartItemResponse;
     }
 }

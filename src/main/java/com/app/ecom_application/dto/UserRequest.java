@@ -1,6 +1,5 @@
 package com.app.ecom_application.dto;
 
-import com.app.ecom_application.model.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,7 +30,4 @@ public class UserRequest {
 
     @NotBlank(message = "102")
     private String password;
-
-    @NotNull(message = "109")
-    private UserRole userRole;
 }

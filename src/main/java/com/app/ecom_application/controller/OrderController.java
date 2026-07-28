@@ -1,6 +1,7 @@
 package com.app.ecom_application.controller;
 
 import com.app.ecom_application.dto.OrderResponse;
+import com.app.ecom_application.model.OrderStatus;
 import com.app.ecom_application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -28,10 +30,12 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<OrderResponse>> getAllOrders(Authentication authentication) {
-        return orderService.getAllOrders(authentication.getName())
+    public ResponseEntity<List<OrderResponse>> getAllOrders(Authentication authentication, @RequestParam(required = false) LocalDateTime from, @RequestParam(required = false) LocalDateTime to, @RequestParam(required = false) OrderStatus status) {
+
+        return orderService
+                .getAllOrders(authentication.getName(), from, to, status)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{orderId}")
@@ -53,5 +57,18 @@ public class OrderController {
         }
 
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    public ResponseEntity<List<OrderResponse>> getAllOrdersForAdmin(
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) LocalDateTime from,
+            @RequestParam(required = false) LocalDateTime to,
+            @RequestParam(required = false) OrderStatus status) {
+
+        return ResponseEntity.ok(
+                orderService.getAllOrdersForAdmin(username, from, to, status)
+        );
     }
 }

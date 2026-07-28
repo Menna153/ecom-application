@@ -3,8 +3,10 @@ package com.app.ecom_application.service;
 import com.app.ecom_application.dto.AddressDTO;
 import com.app.ecom_application.dto.UserRequest;
 import com.app.ecom_application.dto.UserResponse;
+import com.app.ecom_application.exception.ErrorCode;
 import com.app.ecom_application.model.Address;
 import com.app.ecom_application.model.User;
+import com.app.ecom_application.model.UserRole;
 import com.app.ecom_application.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,9 +28,34 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public void addUser(UserRequest userRequest) {
+    public ErrorCode addCustomer(UserRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            return ErrorCode.USERNAME_ALREADY_EXISTS;
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ErrorCode.EMAIL_ALREADY_EXISTS;
+        }
+        createUser(request, UserRole.CUSTOMER);
+        return null;
+    }
+
+    public ErrorCode addAdmin(UserRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            return ErrorCode.USERNAME_ALREADY_EXISTS;
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ErrorCode.EMAIL_ALREADY_EXISTS;
+        }
+        createUser(request, UserRole.ADMIN);
+        return null;
+    }
+
+    private void createUser(UserRequest request, UserRole role) {
         User user = new User();
-        makeUserFromRequest(user, userRequest);
+        makeUserFromRequest(user, request);
+        user.setRole(role);
         userRepository.save(user);
     }
 
@@ -36,22 +63,46 @@ public class UserService {
         return userRepository.findById(id).map(this::mapToUserResponse);
     }
 
-    public boolean updateUser(Long id, UserRequest updatedUserRequest) {
-        return userRepository.findById(id).map(existingUser -> {
-            makeUserFromRequest(existingUser, updatedUserRequest);
-            userRepository.save(existingUser);
-            return true;
-        }).orElse(false);
+    public ErrorCode updateUser(String loggedInUsername, Long id, UserRequest request) {
+        Optional<User> loggedUser =
+                userRepository.findByUsername(loggedInUsername);
+
+        Optional<User> targetUser =
+                userRepository.findById(id);
+
+        if (loggedUser.isEmpty() || targetUser.isEmpty()) {
+            return ErrorCode.USER_NOT_FOUND;
+        }
+        User current = loggedUser.get();
+        User target = targetUser.get();
+
+        if (current.getRole() != UserRole.ADMIN &&
+                current.getRole() != UserRole.SUPER_ADMIN &&
+                !current.getId().equals(target.getId())) {
+            return ErrorCode.UNAUTHORIZED;
+        }
+        if (!target.getUsername().equals(request.getUsername()) &&
+                userRepository.existsByUsername(request.getUsername())) {
+            return ErrorCode.USERNAME_ALREADY_EXISTS;
+        }
+
+        if (!target.getEmail().equals(request.getEmail()) &&
+                userRepository.existsByEmail(request.getEmail())) {
+            return ErrorCode.EMAIL_ALREADY_EXISTS;
+        }
+
+        makeUserFromRequest(target, request);
+        userRepository.save(target);
+        return null;
     }
 
-    private void makeUserFromRequest(User user, UserRequest userRequest) {
+    public void makeUserFromRequest(User user, UserRequest userRequest) {
         user.setFirstName(userRequest.getFirstName());
         user.setLastName(userRequest.getLastName());
         user.setEmail(userRequest.getEmail());
         user.setPhone(userRequest.getPhone());
         user.setUsername(userRequest.getUsername());
         user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        user.setRole(userRequest.getUserRole());
         Address address = new Address();
         address.setStreet(userRequest.getAddress().getStreet());
         address.setApartment(userRequest.getAddress().getApartment());
@@ -61,7 +112,7 @@ public class UserService {
 
     }
 
-    private UserResponse mapToUserResponse(User user) {
+    public UserResponse mapToUserResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(String.valueOf(user.getId()));
         response.setFirstName(user.getFirstName());

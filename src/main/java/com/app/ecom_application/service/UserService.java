@@ -9,6 +9,7 @@ import com.app.ecom_application.model.User;
 import com.app.ecom_application.model.UserRole;
 import com.app.ecom_application.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -59,8 +60,18 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public Optional<UserResponse> fetchUser(Long id) {
-        return userRepository.findById(id).map(this::mapToUserResponse);
+    public Optional<UserResponse> fetchUser(String username, Long id) {
+
+        User loggedInUser = userRepository.findByUsername(username)
+                .orElseThrow();
+
+        if (loggedInUser.getRole() == UserRole.CUSTOMER
+                && !loggedInUser.getId().equals(id)) {
+            throw new AccessDeniedException("You do not have access");
+        }
+
+        return userRepository.findById(id)
+                .map(this::mapToUserResponse);
     }
 
     public ErrorCode updateUser(String loggedInUsername, Long id, UserRequest request) {

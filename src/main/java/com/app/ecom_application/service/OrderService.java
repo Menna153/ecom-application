@@ -7,6 +7,7 @@ import com.app.ecom_application.repository.OrderRepository;
 import com.app.ecom_application.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -106,42 +107,54 @@ public class OrderService {
         );
     }
 
-    public Optional<OrderResponse> getOrder(String userId, Long orderId) {
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(userOpt.isEmpty()) {
-            return Optional.empty();
+    public Optional<OrderResponse> getOrder(String username, Long orderId) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_ORDER_ID"));
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("INVALID_ORDER_ID");
         }
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        if(orderOpt.isEmpty() || orderOpt.get().getStatus().equals(OrderStatus.CANCELLED)) {
-            return Optional.empty();
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not have access");
         }
-        return orderRepository.findByUserIdAndId(userOpt.get().getId(), orderId)
-                .map(this::mapToOrderResponse);
+
+        return Optional.of(mapToOrderResponse(order));
     }
 
-    public boolean deleteOrder(String userId, Long orderId) {
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(userOpt.isEmpty()) {
-            return false;
-        }
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        if(orderOpt.isEmpty() || orderOpt.get().getStatus().equals(OrderStatus.CANCELLED)) {
-            return false;
-        }
-        return orderRepository.findByUserIdAndId(userOpt.get().getId(), orderId)
-                .map(order -> {
-                    for (OrderItem item : order.getItems()) {
-                        Product product = item.getProduct();
+    public boolean deleteOrder(String username, Long orderId) {
 
-                        product.setStockQuantity(
-                                product.getStockQuantity() + item.getQuantity()
-                        );
-                    }
-                    order.setStatus(OrderStatus.CANCELLED);
-                    orderRepository.save(order);
-                    return true;
-                })
-                .orElse(false);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_ORDER_ID"));
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("INVALID_ORDER_ID");
+        }
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You do not have access");
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            product.setStockQuantity(
+                    product.getStockQuantity() + item.getQuantity()
+            );
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        return true;
     }
 
     private OrderResponse mapToOrderResponse(Order savedOrder) {

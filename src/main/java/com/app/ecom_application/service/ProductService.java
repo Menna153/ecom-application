@@ -21,19 +21,27 @@ public class ProductService {
 
     public ProductResponse createProduct(ProductRequest productRequest) {
         Product product = new Product();
+        if (productRepository.existsByNameIgnoreCase(productRequest.getName())) {
+            throw new IllegalArgumentException("PRODUCT_NAME_EXISTS");
+        }
         makeProductFromRequest(product, productRequest);
         Product savedProduct = productRepository.save(product);
         return mapToProductResponse(savedProduct);
     }
 
-    public Optional<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {
-        return productRepository.findById(id)
-                .filter(Product::isActive)
-                .map(existingProduct -> {
-            makeProductFromRequest(existingProduct, productRequest);
-            Product savedProduct = productRepository.save(existingProduct);
-            return mapToProductResponse(savedProduct);
-        });
+    public ProductResponse updateProduct(Long id, ProductRequest request) {
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_PRODUCT_ID"));
+
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("INVALID_PRODUCT_ID");
+        }
+
+        makeProductFromRequest(product, request);
+
+        return mapToProductResponse(productRepository.save(product));
     }
 
     public List<ProductResponse> getAllProducts(String name, int page, int size) {
@@ -54,19 +62,27 @@ public class ProductService {
                 .toList();
     }
 
-    public Optional<ProductResponse> getProduct(Long id) {
-        return productRepository.findById(id)
-                .filter(Product::isActive)
-                .map(this::mapToProductResponse);
+    public ProductResponse getProduct(Long id) {
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_PRODUCT_ID"));
+
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("INVALID_PRODUCT_ID");
+        }
+
+        return mapToProductResponse(product);
     }
 
-    public boolean deleteProduct(Long id) {
-        return productRepository.findById(id)
-                .map(product -> {
-                    product.setActive(false);
-                    productRepository.save(product);
-                    return true;
-                }).orElse(false);
+    public void deleteProduct(Long id) {
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_PRODUCT_ID"));
+
+        product.setActive(false);
+        productRepository.save(product);
     }
 
     public ProductResponse mapToProductResponse(Product savedProduct) {

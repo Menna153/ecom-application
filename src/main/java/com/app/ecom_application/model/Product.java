@@ -1,9 +1,6 @@
 package com.app.ecom_application.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -16,9 +13,13 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false, unique = true)
     private String name;
+    @Column(nullable = false)
     private String description;
+    @Column(nullable = false)
     private BigDecimal price;
+    @Column(nullable = false)
     private Integer stockQuantity;
     private String imageUrl;
     private boolean active = true;

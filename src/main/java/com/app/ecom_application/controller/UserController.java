@@ -25,16 +25,16 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        if (userService.fetchAllUsers().isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
         return new ResponseEntity<>(userService.fetchAllUsers(), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN','CUSTOMER')")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
-        return userService.fetchUser(id)
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','CUSTOMER')")
+    public ResponseEntity<UserResponse> getUser(
+            Authentication authentication,
+            @PathVariable Long id) {
+
+        return userService.fetchUser(authentication.getName(), id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

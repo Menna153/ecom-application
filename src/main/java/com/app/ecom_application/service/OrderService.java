@@ -4,16 +4,19 @@ import com.app.ecom_application.dto.OrderItemDTO;
 import com.app.ecom_application.dto.OrderResponse;
 import com.app.ecom_application.model.*;
 import com.app.ecom_application.repository.OrderRepository;
+import com.app.ecom_application.repository.ProductRepository;
 import com.app.ecom_application.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -22,59 +25,77 @@ public class OrderService {
     private final CartService cartService;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
 
-    public Optional<OrderResponse> createOrder(String userId) {
+    public OrderResponse createOrder(String userId) {
+
         List<CartItem> cartItems = cartService.getCartItems(userId);
-        if(cartItems.isEmpty()) {
-            return Optional.empty();
+
+        if (cartItems.isEmpty()) {
+            throw new IllegalArgumentException("CART_EMPTY");
         }
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(userOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        User user = userOpt.get();
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
+            if(!product.isActive()) {
+                throw new IllegalArgumentException("INVALID_PRODUCT_ID");
+            }
             if (product.getStockQuantity() < item.getQuantity()) {
-                return Optional.empty();
+                throw new IllegalArgumentException("PRODUCT_OUT_OF_STOCK");
             }
         }
+
         BigDecimal totalPrice = cartItems.stream()
                 .map(CartItem::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.CONFIRMED);
         order.setTotalAmount(totalPrice);
         order.setCreatedAt(LocalDateTime.now());
+
         List<OrderItem> orderItems = cartItems.stream()
                 .map(item -> new OrderItem(
                         null,
                         item.getProduct(),
                         item.getQuantity(),
                         item.getPrice(),
-                        order
-                )).toList();
+                        order))
+                .toList();
+
         order.setItems(orderItems);
+
         Order savedOrder = orderRepository.save(order);
+
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
-
             product.setStockQuantity(
                     product.getStockQuantity() - item.getQuantity()
             );
+            productRepository.save(product);
         }
+
         cartService.clearCart(userId);
-        return Optional.of(mapToOrderResponse(savedOrder));
+
+        return mapToOrderResponse(savedOrder);
     }
 
-    public Optional<List<OrderResponse>> getAllOrders(String userId, LocalDateTime from, LocalDateTime to, OrderStatus status) {
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(userOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        User user = userOpt.get();
-        List<Order> orders;
+    public Page<OrderResponse> getAllOrders(
+            String userId,
+            LocalDateTime from,
+            LocalDateTime to,
+            OrderStatus status,
+            int page,
+            int size) {
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
 
         if (from == null) {
             from = LocalDateTime.of(2000, 1, 1, 0, 0);
@@ -84,33 +105,36 @@ public class OrderService {
             to = LocalDateTime.now();
         }
 
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Order> orders;
+
         if (status != null) {
             orders = orderRepository.findByUserIdAndStatusAndCreatedAtBetween(
                     user.getId(),
                     status,
                     from,
-                    to
+                    to,
+                    pageable
             );
         } else {
-            orders = orderRepository.findByUserIdAndCreatedAtBetween(
+            orders = orderRepository.findByUserIdAndStatusNotAndCreatedAtBetween(
                     user.getId(),
+                    OrderStatus.CANCELLED,
                     from,
-                    to
+                    to,
+                    pageable
             );
         }
 
-        return Optional.of(
-                orders.stream()
-                        .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                        .map(this::mapToOrderResponse)
-                        .toList()
-        );
+        return orders.map(this::mapToOrderResponse);
     }
 
-    public Optional<OrderResponse> getOrder(String username, Long orderId) {
+    public OrderResponse getOrder(String username, Long orderId) {
 
         User user = userRepository.findByUsername(username)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
@@ -124,13 +148,14 @@ public class OrderService {
             throw new AccessDeniedException("You do not have access");
         }
 
-        return Optional.of(mapToOrderResponse(order));
+        return mapToOrderResponse(order);
     }
 
-    public boolean deleteOrder(String username, Long orderId) {
+    public void deleteOrder(String username, Long orderId) {
 
         User user = userRepository.findByUsername(username)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
@@ -153,8 +178,68 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+    }
 
-        return true;
+    public Page<OrderResponse> getAllOrdersForAdmin(
+            String username,
+            LocalDateTime from,
+            LocalDateTime to,
+            OrderStatus status,
+            int page,
+            int size) {
+
+        if (from == null) {
+            from = LocalDateTime.of(2000, 1, 1, 0, 0);
+        }
+
+        if (to == null) {
+            to = LocalDateTime.now();
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Order> orders;
+
+        if (username != null && status != null) {
+
+            orders = orderRepository.findByUserUsernameAndStatusAndCreatedAtBetween(
+                    username,
+                    status,
+                    from,
+                    to,
+                    pageable
+            );
+
+        } else if (username != null) {
+
+            orders = orderRepository.findByUserUsernameAndStatusNotAndCreatedAtBetween(
+                    username,
+                    OrderStatus.CANCELLED,
+                    from,
+                    to,
+                    pageable
+            );
+
+        } else if (status != null) {
+
+            orders = orderRepository.findByStatusAndCreatedAtBetween(
+                    status,
+                    from,
+                    to,
+                    pageable
+            );
+
+        } else {
+
+            orders = orderRepository.findByCreatedAtBetweenAndStatusNot(
+                    from,
+                    to,
+                    OrderStatus.CANCELLED,
+                    pageable
+            );
+        }
+
+        return orders.map(this::mapToOrderResponse);
     }
 
     private OrderResponse mapToOrderResponse(Order savedOrder) {
@@ -168,42 +253,9 @@ public class OrderService {
                                 orderItem.getProduct().getId(),
                                 orderItem.getQuantity(),
                                 orderItem.getPrice()
-                        )).toList()
+                        ))
+                        .toList(),
+                savedOrder.getCreatedAt()
         );
-    }
-
-    public List<OrderResponse> getAllOrdersForAdmin(
-            String username,
-            LocalDateTime from,
-            LocalDateTime to,
-            OrderStatus status) {
-
-        if (from == null) {
-            from = LocalDateTime.of(2000, 1, 1, 0, 0);
-        }
-
-        if (to == null) {
-            to = LocalDateTime.now();
-        }
-
-        List<Order> orders;
-
-        if (username != null && status != null) {
-            orders = orderRepository.findByUserUsernameAndStatusAndCreatedAtBetween(
-                    username, status, from, to);
-        } else if (username != null) {
-            orders = orderRepository.findByUserUsernameAndCreatedAtBetween(
-                    username, from, to);
-        } else if (status != null) {
-            orders = orderRepository.findByStatusAndCreatedAtBetween(
-                    status, from, to);
-        } else {
-            orders = orderRepository.findByCreatedAtBetween(from, to);
-        }
-
-        return orders.stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .map(this::mapToOrderResponse)
-                .toList();
     }
 }

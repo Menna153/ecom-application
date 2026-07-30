@@ -63,7 +63,7 @@ public class UserService {
     public Optional<UserResponse> fetchUser(String username, Long id) {
 
         User loggedInUser = userRepository.findByUsername(username)
-                .orElseThrow();
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
         if (loggedInUser.getRole() == UserRole.CUSTOMER
                 && !loggedInUser.getId().equals(id)) {
@@ -107,7 +107,7 @@ public class UserService {
         return null;
     }
 
-    public void makeUserFromRequest(User user, UserRequest userRequest) {
+    private void makeUserFromRequest(User user, UserRequest userRequest) {
         user.setFirstName(userRequest.getFirstName());
         user.setLastName(userRequest.getLastName());
         user.setEmail(userRequest.getEmail());
@@ -123,7 +123,7 @@ public class UserService {
 
     }
 
-    public UserResponse mapToUserResponse(User user) {
+    private UserResponse mapToUserResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(String.valueOf(user.getId()));
         response.setFirstName(user.getFirstName());

@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -25,36 +24,40 @@ public class CartService {
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
 
-    public boolean addToCart(String userId, CartItemRequest request) {
-        Optional<Product> productOpt = productRepository.findById(request.getProductId());
-        if(productOpt.isEmpty()) {
-            return false;
+    public void addToCart(String userId, CartItemRequest request) {
+
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_PRODUCT_ID"));
+
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("INVALID_PRODUCT_ID");
         }
-        Product product = productOpt.get();
-        if(!product.isActive()) {
-            return false;
-        }
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(userOpt.isEmpty()) {
-            return false;
-        }
-        User user = userOpt.get();
-        CartItem existingCartItem = cartItemRepository.findByUserAndProduct(user, product);
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
+        CartItem existingCartItem =
+                cartItemRepository.findByUserAndProduct(user, product);
+
         int totalQuantity = request.getQuantity();
+
         if (existingCartItem != null) {
             totalQuantity += existingCartItem.getQuantity();
         }
+
         if (product.getStockQuantity() < totalQuantity) {
-            return false;
+            throw new IllegalArgumentException("PRODUCT_OUT_OF_STOCK");
         }
+
         if (existingCartItem != null) {
             existingCartItem.setQuantity(totalQuantity);
             existingCartItem.setPrice(
                     product.getPrice().multiply(BigDecimal.valueOf(totalQuantity))
             );
             cartItemRepository.save(existingCartItem);
-        }
-        else {
+        } else {
             CartItem cartItem = new CartItem();
             cartItem.setUser(user);
             cartItem.setProduct(product);
@@ -64,40 +67,62 @@ public class CartService {
             );
             cartItemRepository.save(cartItem);
         }
-        return true;
     }
 
-    public boolean deleteFromCart(String userId, Long productId) {
-        Optional<Product> productOpt = productRepository.findById(productId);
-        Optional<User> userOpt = userRepository.findByUsername(userId);
-        if(productOpt.isPresent() && userOpt.isPresent()) {
-            cartItemRepository.deleteByUserAndProduct(userOpt.get(), productOpt.get());
-            return true;
+    public void deleteFromCart(String userId, Long productId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("INVALID_PRODUCT_ID"));
+
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("INVALID_PRODUCT_ID");
         }
-        return false;
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
+        CartItem cartItem = cartItemRepository.findByUserAndProduct(user, product);
+
+        if (cartItem == null) {
+            throw new IllegalArgumentException("CART_ITEM_NOT_FOUND");
+        }
+
+        cartItemRepository.delete(cartItem);
     }
 
     public List<CartItemResponse> getCart(String userId) {
-        return userRepository.findByUsername(userId)
-                .map(cartItemRepository::findByUser)
-                .orElse(List.of())
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
+        return cartItemRepository.findByUser(user)
                 .stream()
                 .map(this::mapToCartItemResponse)
                 .toList();
     }
 
     public List<CartItem> getCartItems(String userId) {
-        return userRepository.findByUsername(userId)
-                .map(cartItemRepository::findByUser)
-                .orElse(List.of());
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
+        return cartItemRepository.findByUser(user);
     }
 
     public void clearCart(String userId) {
-        userRepository.findByUsername(userId)
-                .ifPresent(cartItemRepository::deleteByUser);
+
+        User user = userRepository.findByUsername(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("USER_NOT_FOUND"));
+
+        cartItemRepository.deleteByUser(user);
     }
 
-    public CartItemResponse mapToCartItemResponse(CartItem cartItem) {
+    private CartItemResponse mapToCartItemResponse(CartItem cartItem) {
         CartItemResponse cartItemResponse = new CartItemResponse();
         cartItemResponse.setProductId(cartItem.getProduct().getId());
         cartItemResponse.setProductName(cartItem.getProduct().getName());

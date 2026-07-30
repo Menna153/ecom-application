@@ -39,8 +39,10 @@ public enum ErrorCode {
     INVALID_USERNAME_OR_PASSWORD(4000, "Invalid username or password"),
     INVALID_PRODUCT_ID(4001, "Product not found (invalid product ID)"),
     INVALID_ORDER_ID(4002, "Order not found (invalid order ID)"),
-    INVALID_TOKEN(4003, "Invalid token");
-
+    INVALID_TOKEN(4003, "Invalid token"),
+    PRODUCT_OUT_OF_STOCK(4004, "Product is out of stock"),
+    CART_ITEM_NOT_FOUND(4005, "Product is not in the cart"),
+    CART_EMPTY(4006, "Cart is empty");
     private final int code;
     private final String message;
 

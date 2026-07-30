@@ -86,7 +86,28 @@ public class GlobalExceptionHandler {
                         .body(new ErrorResponse(
                                 ErrorCode.INVALID_TOKEN.getMessage(),
                                 ErrorCode.INVALID_TOKEN.getCode()));
+            case "USER_NOT_FOUND":
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(
+                                ErrorCode.USER_NOT_FOUND.getMessage(),
+                                ErrorCode.USER_NOT_FOUND.getCode()));
 
+            case "PRODUCT_OUT_OF_STOCK":
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse(
+                                ErrorCode.PRODUCT_OUT_OF_STOCK.getMessage(),
+                                ErrorCode.PRODUCT_OUT_OF_STOCK.getCode()));
+
+            case "CART_ITEM_NOT_FOUND":
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(
+                                ErrorCode.CART_ITEM_NOT_FOUND.getMessage(),
+                                ErrorCode.CART_ITEM_NOT_FOUND.getCode()));
+            case "CART_EMPTY":
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse(
+                                ErrorCode.CART_EMPTY.getMessage(),
+                                ErrorCode.CART_EMPTY.getCode()));
             default:
                 return ResponseEntity.badRequest()
                         .body(new ErrorResponse("Bad request", 4000));

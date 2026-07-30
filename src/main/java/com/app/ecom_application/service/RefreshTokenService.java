@@ -34,6 +34,10 @@ public class RefreshTokenService {
         refreshTokenRepository.delete(refreshToken);
     }
 
+    public void deleteByUser(User user) {
+        refreshTokenRepository.deleteByUser(user);
+    }
+
     public boolean isValid(String token) {
         return refreshTokenRepository.findByToken(token)
                 .filter(t -> t.getExpiryDate().isAfter(LocalDateTime.now()))

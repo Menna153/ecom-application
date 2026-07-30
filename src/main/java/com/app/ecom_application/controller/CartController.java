@@ -23,18 +23,16 @@ public class CartController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<String> addToCart(Authentication authentication, @Valid @RequestBody CartItemRequest request) {
-        if(!cartService.addToCart(authentication.getName(), request)) {
-            return ResponseEntity.badRequest().body("Product out of stock or product not found or User not found");
-        }
+    public ResponseEntity<Void> addToCart(Authentication authentication, @Valid @RequestBody CartItemRequest request) {
+        cartService.addToCart(authentication.getName(), request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @DeleteMapping("/items/{productId}")
+    @DeleteMapping("/{productId}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<Void> removeFromCart(Authentication authentication, @PathVariable Long productId) {
-        boolean deleted = cartService.deleteFromCart(authentication.getName(), productId);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteFromCart(Authentication authentication, @PathVariable Long productId) {
+        cartService.deleteFromCart(authentication.getName(), productId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

@@ -30,6 +30,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("type", "ACCESS")
                 .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + expiration)
@@ -42,6 +43,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("type", "REFRESH")
                 .setIssuedAt(new Date())
                 .setExpiration(
                         new Date(System.currentTimeMillis() + refreshExpiration)
@@ -50,13 +52,33 @@ public class JwtService {
                 .compact();
     }
 
+    public String extractTokenType(String token) {
+        return extractClaims(token).get("type", String.class);
+    }
+
     public String extractUsername(String token) {
         return extractClaims(token).getSubject();
     }
 
     public boolean isTokenValid(String token, String username) {
-        return username.equals(extractUsername(token));
+        return username.equals(extractUsername(token))
+                && !isTokenExpired(token);
     }
+
+    public boolean isAccessToken(String token) {
+        return "ACCESS".equals(extractTokenType(token));
+    }
+
+    public boolean isRefreshToken(String token) {
+        return "REFRESH".equals(extractTokenType(token));
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractClaims(token)
+                .getExpiration()
+                .before(new Date());
+    }
+
 
     private Claims extractClaims(String token) {
         try {

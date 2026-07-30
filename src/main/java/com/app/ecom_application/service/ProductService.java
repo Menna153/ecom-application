@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +20,7 @@ public class ProductService {
 
     public ProductResponse createProduct(ProductRequest productRequest) {
         Product product = new Product();
-        if (productRepository.existsByNameIgnoreCase(productRequest.getName())) {
+        if (productRepository.existsByNameIgnoreCaseAndActiveTrue(productRequest.getName())) {
             throw new IllegalArgumentException("PRODUCT_NAME_EXISTS");
         }
         makeProductFromRequest(product, productRequest);
@@ -38,7 +37,11 @@ public class ProductService {
         if (!product.isActive()) {
             throw new IllegalArgumentException("INVALID_PRODUCT_ID");
         }
+        if (!product.getName().equalsIgnoreCase(request.getName())
+                && productRepository.existsByNameIgnoreCaseAndActiveTrue(request.getName())) {
 
+            throw new IllegalArgumentException("PRODUCT_NAME_EXISTS");
+        }
         makeProductFromRequest(product, request);
 
         return mapToProductResponse(productRepository.save(product));
@@ -81,11 +84,15 @@ public class ProductService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("INVALID_PRODUCT_ID"));
 
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("INVALID_PRODUCT_ID");
+        }
+
         product.setActive(false);
         productRepository.save(product);
     }
 
-    public ProductResponse mapToProductResponse(Product savedProduct) {
+    private ProductResponse mapToProductResponse(Product savedProduct) {
         ProductResponse response = new ProductResponse();
         response.setId(savedProduct.getId());
         response.setName(savedProduct.getName());
@@ -97,7 +104,7 @@ public class ProductService {
         return response;
     }
 
-    public void makeProductFromRequest(Product product, ProductRequest productRequest) {
+    private void makeProductFromRequest(Product product, ProductRequest productRequest) {
         product.setName(productRequest.getName());
         product.setDescription(productRequest.getDescription());
         product.setPrice(productRequest.getPrice());
